@@ -1,16 +1,19 @@
 use appdomain::IAppDomain;
 use assembly::IAssembly;
+use methodinfo::IMethodInfo;
 use windows::{
     core::{w, Interface, Param, GUID, PWSTR}, Win32::{
-        Foundation::{GENERIC_READ, S_OK}, Storage::FileSystem::{GetFileSizeEx, ReadFileEx, FILE_ATTRIBUTE_NORMAL, FILE_CREATION_DISPOSITION, FILE_SHARE_READ}, System::{ClrHosting::{CLRCreateInstance, CLSID_CLRMetaHost, ICLRMetaHost, ICLRRuntimeInfo, ICorRuntimeHost}, Com::{SAFEARRAY, SAFEARRAYBOUND}, Ole::{IRecordInfo, SafeArrayAccessData, SafeArrayCreate, SafeArrayCreateEx, SafeArrayCreateVectorEx, SafeArrayLock, SafeArrayUnaccessData, SafeArrayUnlock}, Variant::VT_UI1, IO::OVERLAPPED}
+        Foundation::{GENERIC_READ, S_OK}, Storage::FileSystem::{GetFileSizeEx, ReadFileEx, FILE_ATTRIBUTE_NORMAL, FILE_CREATION_DISPOSITION, FILE_SHARE_READ}, System::{ClrHosting::{CLRCreateInstance, CLSID_CLRMetaHost, ICLRMetaHost, ICLRRuntimeInfo, ICorRuntimeHost}, Com::{SAFEARRAY, SAFEARRAYBOUND}, Ole::{IRecordInfo, SafeArrayAccessData, SafeArrayCreate, SafeArrayCreateEx, SafeArrayCreateVector, SafeArrayCreateVectorEx, SafeArrayLock, SafeArrayPutElement, SafeArrayUnaccessData, SafeArrayUnlock}, Variant::{VARENUM, VARIANT, VARIANT_0, VARIANT_0_0, VARIANT_0_0_0, VT_ARRAY, VT_BSTR, VT_LPWSTR, VT_UI1, VT_VARIANT}, IO::OVERLAPPED}
     }
 };
 use windows::Win32::Storage::FileSystem::CreateFileW;
+use windows_core::BSTR;
 
 mod appdomain;
 mod assembly;
+mod methodinfo;
 
-use std::ffi::{CStr, CString};
+use std::{ffi::{CStr, CString}, mem::ManuallyDrop, ops::Deref};
 use std::os::raw::{c_char, c_void};
 
 #[link(name = "hostfxr")]
@@ -128,9 +131,64 @@ fn main() {
         println!("{:X?}", assembly_ptr);
         let mut assembly = unsafe { IAssembly::from_raw(assembly_ptr as *mut c_void) };
 
-        println!("{:?}", unsafe { assembly.ToString() });
-        // AppDomainのvtblを自力で実装しなきゃいけない
-        // .NET9からはLoadFromStreamでAssemblyを読み込める
-        // public System.Reflection.Assembly LoadFromStream (System.IO.Stream assembly);
+        let mut entry_ptr = std::ptr::null_mut();
+        unsafe { assembly.get_EntryPoint(&mut entry_ptr).unwrap() };
+        let mut entrypoint = unsafe { IMethodInfo::from_raw(entry_ptr as *mut c_void) };
+        println!("{:x?}", unsafe { entrypoint.ToString() });
+
+        let obj = VARIANT::default();
+        let mut pRetVal = VARIANT::default();
+        let args = vec![String::from("test1"), String::from("test2")];
+        let args_variant = wrap_strings_in_array(&args).unwrap();
+        let parameters = wrap_method_arguments(vec![args_variant]).unwrap();
+        println!("{:?}", unsafe {*parameters});
+        unsafe { entrypoint.Invoke_3(obj, parameters, &mut pRetVal).unwrap() };
     });
+}
+
+pub fn wrap_strings_in_array(strings: &[String]) -> Result<VARIANT, String> {
+    let inner = strings.iter()
+        .map(|s| BSTR::from(s).into_raw())
+        .collect::<Vec<*const u16>>();
+
+    let safe_array_ptr: *mut SAFEARRAY =
+        unsafe { SafeArrayCreateVector(VT_BSTR, 0, inner.len() as u32) };
+
+    inner.iter().enumerate().for_each(|(i, v)| {
+        match unsafe { SafeArrayPutElement(safe_array_ptr, [i as i32].as_ptr(), *v as *const _) } {
+            Ok(_) => {},
+            Err(e) => {println!("{e}")},
+        }
+    });
+
+    Ok(VARIANT {
+        Anonymous: VARIANT_0 {
+            Anonymous: ManuallyDrop::new(VARIANT_0_0 {
+                vt: VARENUM(VT_BSTR.0 | VT_ARRAY.0),
+                wReserved1: 0,
+                wReserved2: 0,
+                wReserved3: 0,
+                Anonymous: VARIANT_0_0_0 {
+                    parray: safe_array_ptr,
+                },
+            }),
+        },
+    })
+}
+
+pub fn wrap_method_arguments(arguments: Vec<VARIANT>) -> Result<*mut SAFEARRAY, String> {
+    let variant_array_ptr: *mut SAFEARRAY =
+        unsafe { SafeArrayCreateVector(VT_VARIANT, 0, arguments.len() as u32) };
+
+    arguments.iter().enumerate().for_each(|(i, v)| {
+        let v_ref: *const _ = v;
+        match unsafe { SafeArrayPutElement(variant_array_ptr, [i as i32].as_ptr(), v_ref as *const _) }
+        {
+            Ok(_) => {},
+            Err(e) => {println!("{e}")},
+        }
+
+    });
+
+    Ok(variant_array_ptr)
 }
