@@ -1,8 +1,10 @@
 use std::os::raw::c_void;
 
 mod clr;
+mod commandline;
 mod file;
 
+use clap::Parser;
 use clr::core::appdomain::IAppDomain;
 use clr::core::assembly::IAssembly;
 use clr::core::methodinfo::IMethodInfo;
@@ -16,6 +18,8 @@ use windows_core::Interface;
 const CLR_VERSION: &str = "v4.0.30319";
 
 fn main() {
+    let commandline = commandline::CommandLine::parse();
+
     let installed_versions = util::get_installed_runtime_versions();
 
     let is_expected_version = installed_versions.contains_key(CLR_VERSION);
@@ -32,7 +36,7 @@ fn main() {
     let appdomain = cor_runtime_host.create_domain();
 
     let buf =
-        get_payload_from_filesystem(r"C:\Users\lab\Desktop\RoadLoader\.net4-test-project.exe");
+        get_payload_from_filesystem(commandline.url);
 
     let mut bounds = SAFEARRAYBOUND {
         cElements: buf.len() as _,
@@ -76,4 +80,3 @@ fn main() {
             .unwrap()
     };
 }
-

@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 windows-core = "0.61.0"
+clap = { version = "4.5.37", features = ["derive"] }
+
 
 [dependencies.windows]
 version = "0.61.1"
@@ -17,4 +19,6 @@ features = [
     "Win32_System_IO",
     "Win32_System_Ole",
     "Win32_System_Variant",
+    "Win32_System_Environment",
+    "Win32_UI_Shell",
 ]
