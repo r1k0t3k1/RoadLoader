@@ -1,26 +1,40 @@
 use core::ffi::c_void;
 
 use windows::Win32::System::{Com::SAFEARRAY, Variant::VARIANT};
-use windows_core::{IUnknown_Vtbl, HRESULT};
+use windows_core::{HRESULT, IUnknown_Vtbl};
 
-windows_core::imp::define_interface!(IMethodInfo, IMethodInfo_Vtbl, 0xffcc1b5d_ecb8_38dd_9b01_3dc8abc2aa5f);
+windows_core::imp::define_interface!(
+    IMethodInfo,
+    IMethodInfo_Vtbl,
+    0xffcc1b5d_ecb8_38dd_9b01_3dc8abc2aa5f
+);
 windows_core::imp::interface_hierarchy!(IMethodInfo, windows_core::IUnknown);
 impl IMethodInfo {
     pub unsafe fn ToString(&self) -> windows_core::Result<windows_core::BSTR> {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).ToString)(windows_core::Interface::as_raw(self), &mut result__).map(|| core::mem::transmute(result__))
+            (windows_core::Interface::vtable(self).ToString)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| core::mem::transmute(result__))
         }
     }
 
-    pub unsafe fn Invoke_3(&self, obj: VARIANT, parameters: *mut SAFEARRAY, pRetVal: *mut VARIANT) -> windows_core::Result<()> {
-        unsafe { 
+    pub unsafe fn Invoke_3(
+        &self,
+        obj: VARIANT,
+        parameters: *mut SAFEARRAY,
+        pRetVal: *mut VARIANT,
+    ) -> windows_core::Result<()> {
+        unsafe {
             (windows_core::Interface::vtable(self).Invoke_3)(
                 windows_core::Interface::as_raw(self),
                 obj,
                 parameters,
                 pRetVal,
-            ).ok()
+            )
+            .ok()
         }
     }
 }

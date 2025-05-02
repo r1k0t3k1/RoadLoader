@@ -3,9 +3,13 @@ use core::ffi::c_void;
 use windows::Win32::System::Com::SAFEARRAY;
 use windows_core::IUnknown_Vtbl;
 
-use crate::assembly::IAssembly;
+use super::assembly::IAssembly;
 
-windows_core::imp::define_interface!(IAppDomain, IAppDomain_Vtbl, 0x05F696DC_2B29_3663_AD8B_C4389CF2A713);
+windows_core::imp::define_interface!(
+    IAppDomain,
+    IAppDomain_Vtbl,
+    0x05F696DC_2B29_3663_AD8B_C4389CF2A713
+);
 windows_core::imp::interface_hierarchy!(IAppDomain, windows_core::IUnknown);
 impl IAppDomain {
     //pub unsafe fn GetTypeInfoCount() -> windows_core::Result<()>{ Ok(()) }
@@ -15,7 +19,11 @@ impl IAppDomain {
     pub unsafe fn ToString(&self) -> windows_core::Result<windows_core::BSTR> {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).ToString)(windows_core::Interface::as_raw(self), &mut result__).map(|| core::mem::transmute(result__))
+            (windows_core::Interface::vtable(self).ToString)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| core::mem::transmute(result__))
         }
     }
     //pub unsafe fn Equals() -> windows_core::Result<()>{ Ok(()) }
@@ -48,11 +56,20 @@ impl IAppDomain {
     //pub unsafe fn CreateInstanceFrom_3() -> windows_core::Result<()>{ Ok(()) }
     //pub unsafe fn Load() -> windows_core::Result<()>{ Ok(()) }
     //pub unsafe fn Load_2() -> windows_core::Result<()>{ Ok(()) }
-    pub unsafe fn Load_3(&self, rawAssembly: *mut SAFEARRAY, pRetVal: *mut *mut IAssembly) -> windows_core::Result<()>{ 
-        unsafe { 
-            (windows_core::Interface::vtable(self).Load_3)(windows_core::Interface::as_raw(self), rawAssembly, pRetVal).ok()
+    pub unsafe fn Load_3(
+        &self,
+        rawAssembly: *mut SAFEARRAY,
+        pRetVal: *mut *mut IAssembly,
+    ) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).Load_3)(
+                windows_core::Interface::as_raw(self),
+                rawAssembly,
+                pRetVal,
+            )
+            .ok()
         }
-     }
+    }
     //pub unsafe fn Load_4() -> windows_core::Result<()>{ Ok(()) }
     //pub unsafe fn Load_5() -> windows_core::Result<()>{ Ok(()) }
     //pub unsafe fn Load_6() -> windows_core::Result<()>{ Ok(()) }
@@ -85,7 +102,10 @@ pub struct IAppDomain_Vtbl {
     pub GetTypeInfo: *const c_void,
     pub GetIDsOfNames: *const c_void,
     pub Invoke: *const c_void,
-    pub ToString: unsafe extern "system" fn(this: *mut c_void, pRetVal: *mut *mut u16) -> windows_core::HRESULT,
+    pub ToString: unsafe extern "system" fn(
+        this: *mut c_void,
+        pRetVal: *mut *mut u16,
+    ) -> windows_core::HRESULT,
     pub Equals: *const c_void,
     pub GetHashCode: *const c_void,
     pub GetType: *const c_void,
@@ -149,5 +169,5 @@ pub struct IAppDomain_Vtbl {
     pub SetThreadPrincipal: *const c_void,
     pub SetPrincipalPolicy: *const c_void,
     pub DoCallBack: *const c_void,
-    pub get_DynamicDirectory: *const c_void, 
+    pub get_DynamicDirectory: *const c_void,
 }

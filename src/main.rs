@@ -1,194 +1,79 @@
-use appdomain::IAppDomain;
-use assembly::IAssembly;
-use methodinfo::IMethodInfo;
-use windows::{
-    core::{w, Interface, Param, GUID, PWSTR}, Win32::{
-        Foundation::{GENERIC_READ, S_OK}, Storage::FileSystem::{GetFileSizeEx, ReadFileEx, FILE_ATTRIBUTE_NORMAL, FILE_CREATION_DISPOSITION, FILE_SHARE_READ}, System::{ClrHosting::{CLRCreateInstance, CLSID_CLRMetaHost, ICLRMetaHost, ICLRRuntimeInfo, ICorRuntimeHost}, Com::{SAFEARRAY, SAFEARRAYBOUND}, Ole::{IRecordInfo, SafeArrayAccessData, SafeArrayCreate, SafeArrayCreateEx, SafeArrayCreateVector, SafeArrayCreateVectorEx, SafeArrayLock, SafeArrayPutElement, SafeArrayUnaccessData, SafeArrayUnlock}, Variant::{VARENUM, VARIANT, VARIANT_0, VARIANT_0_0, VARIANT_0_0_0, VT_ARRAY, VT_BSTR, VT_LPWSTR, VT_UI1, VT_VARIANT}, IO::OVERLAPPED}
-    }
-};
-use windows::Win32::Storage::FileSystem::CreateFileW;
-use windows_core::BSTR;
+use std::os::raw::c_void;
 
-mod appdomain;
-mod assembly;
-mod methodinfo;
+mod clr;
+mod file;
 
-use std::{ffi::{CStr, CString}, mem::ManuallyDrop, ops::Deref};
-use std::os::raw::{c_char, c_void};
+use clr::core::appdomain::IAppDomain;
+use clr::core::assembly::IAssembly;
+use clr::core::methodinfo::IMethodInfo;
+use clr::util;
+use file::get_payload_from_filesystem;
+use windows::Win32::System::Com::{SAFEARRAY, SAFEARRAYBOUND};
+use windows::Win32::System::Ole::{SafeArrayAccessData, SafeArrayCreate, SafeArrayUnaccessData};
+use windows::Win32::System::Variant::{VARIANT, VT_UI1};
+use windows_core::Interface;
 
-#[link(name = "hostfxr")]
-unsafe extern "C" {
-    unsafe fn hostfxr_initialize_for_runtime_config(
-        config_path: *const c_char,
-        parameters: *const c_void,
-        host_context_handle: *mut *mut c_void,
-    ) -> i32;
-    
-    // 他の必要なhostfxr関数...
-}
-
-//fn main() -> Result<(), Box<dyn std::error::Error>> {
-//    
-//    // 結果の処理...
-//    
-//    Ok(())
-//}
-
-fn get_installed_runtime_versions() -> Vec<(String, ICLRRuntimeInfo)> {
-    let clr_meta_host: ICLRMetaHost =
-        unsafe { CLRCreateInstance::<ICLRMetaHost>(&CLSID_CLRMetaHost).unwrap() };
-    let runtimes = unsafe { clr_meta_host.EnumerateInstalledRuntimes().unwrap() };
-
-    let mut installed_versions = vec![];
-
-    let mut buf = [None];
-    let mut fetched = 0_u32;
-    while unsafe { runtimes.Next(&mut buf, Some(&mut fetched)) } == S_OK {
-        let runtime_info = buf[0].clone().unwrap().cast::<ICLRRuntimeInfo>().unwrap();
-
-        let buf = [0_u16; 128];
-        let version_string = Some(PWSTR::from_raw(buf.as_ptr() as *mut u16));
-        let mut length = 128;
-        let _ = unsafe {
-            runtime_info
-                .GetVersionString(version_string, &mut length)
-                .unwrap();
-        };
-        let version = unsafe { version_string.unwrap().to_string().unwrap() };
-        println!("{version}");
-        installed_versions.push((version, runtime_info));
-    }
-    
-    installed_versions
-}
+const CLR_VERSION: &str = "v4.0.30319";
 
 fn main() {
-    let installed_versions = get_installed_runtime_versions();
+    let installed_versions = util::get_installed_runtime_versions();
 
-    installed_versions.iter().for_each(|v| {
-        if v.0 != "v4.0.30319" { return };
-        let CLSID_CorRuntimeHost = GUID::from_values(0xcb2f6723, 0xab3a, 0x11d2, [0x9c, 0x40, 0x00, 0xc0, 0x4f, 0xa3, 0x0a, 0x3e]);
-        let cor_runtime_host = unsafe {
-             v.1.GetInterface::<ICorRuntimeHost>(&CLSID_CorRuntimeHost as *const GUID).unwrap()
-        };
+    let is_expected_version = installed_versions.contains_key(CLR_VERSION);
 
-        unsafe { cor_runtime_host.Start().unwrap() };
-        let friendly_name = w!("test");
-        let evidence = unsafe { cor_runtime_host.CreateEvidence().unwrap() };
-        let appdomain = unsafe { cor_runtime_host.CreateDomain(friendly_name, &evidence).unwrap() };
+    if !is_expected_version {
+        println!("Expected CLR version is not installed.");
+        return;
+    }
 
-        let appdomain = appdomain.cast::<IAppDomain>().unwrap();
+    let cor_runtime_host = clr::runtime_host::CLRRuntimeHost::from(
+        installed_versions.get(CLR_VERSION).unwrap().clone(),
+    );
 
-        let exe_path = w!(r"C:\Users\lab\Desktop\RoadLoader\.net4-test-project.exe");
-        let hwnd = unsafe { 
-            CreateFileW(
-                exe_path,
-                GENERIC_READ.0,
-                FILE_SHARE_READ,
-                None,
-                FILE_CREATION_DISPOSITION(0x3),
-                FILE_ATTRIBUTE_NORMAL,
-                None,
-            ).unwrap()
-        };
+    let appdomain = cor_runtime_host.create_domain();
 
-        let mut lpfilesize = 0_i64;
-        unsafe { GetFileSizeEx(hwnd, &mut lpfilesize).unwrap() };
-        let mut buf = vec![0_u8; lpfilesize as usize];
-        let mut overlapped = OVERLAPPED::default();
+    let buf =
+        get_payload_from_filesystem(r"C:\Users\lab\Desktop\RoadLoader\.net4-test-project.exe");
 
-        unsafe { 
-            ReadFileEx(
-                hwnd,
-                Some(&mut buf),
-                &mut overlapped,
-                None, 
-            ).unwrap()
-        };
+    let mut bounds = SAFEARRAYBOUND {
+        cElements: buf.len() as _,
+        lLbound: 0,
+    };
 
-        let mut bounds = SAFEARRAYBOUND {
-            cElements: buf.len() as _,
-            lLbound: 0,
-        };
-    
-        let safe_array_ptr: *mut SAFEARRAY = unsafe { SafeArrayCreate(VT_UI1, 1, &mut bounds) };
-        let mut pv_data: *mut c_void = std::ptr::null_mut();
-    
-        match unsafe { SafeArrayAccessData(safe_array_ptr, &mut pv_data) } {
-            Ok(_) => {},
-            Err(e) => { println!("e") },
+    let safe_array_ptr: *mut SAFEARRAY = unsafe { SafeArrayCreate(VT_UI1, 1, &mut bounds) };
+    let mut pv_data: *mut c_void = std::ptr::null_mut();
+
+    match unsafe { SafeArrayAccessData(safe_array_ptr, &mut pv_data) } {
+        Ok(_) => {}
+        Err(e) => {
+            println!("e")
         }
-    
-        unsafe { std::ptr::copy_nonoverlapping(buf.as_slice().as_ptr(), pv_data.cast(), buf.len()) };
-    
-        match unsafe { SafeArrayUnaccessData(safe_array_ptr) } {
-            Ok(_) => {},
-            Err(e) => { println!("e") },
-        };
+    }
 
-        let mut assembly_ptr = std::ptr::null_mut();
-        unsafe { appdomain.Load_3(safe_array_ptr, &mut assembly_ptr).unwrap() };
-        println!("{:X?}", assembly_ptr);
-        let mut assembly = unsafe { IAssembly::from_raw(assembly_ptr as *mut c_void) };
+    unsafe { std::ptr::copy_nonoverlapping(buf.as_slice().as_ptr(), pv_data.cast(), buf.len()) };
 
-        let mut entry_ptr = std::ptr::null_mut();
-        unsafe { assembly.get_EntryPoint(&mut entry_ptr).unwrap() };
-        let mut entrypoint = unsafe { IMethodInfo::from_raw(entry_ptr as *mut c_void) };
-        println!("{:x?}", unsafe { entrypoint.ToString() });
+    match unsafe { SafeArrayUnaccessData(safe_array_ptr) } {
+        Ok(_) => {}
+        Err(e) => {
+            println!("e")
+        }
+    };
 
-        let obj = VARIANT::default();
-        let mut pRetVal = VARIANT::default();
-        let args = vec![String::from("test1"), String::from("test2")];
-        let args_variant = wrap_strings_in_array(&args).unwrap();
-        let parameters = wrap_method_arguments(vec![args_variant]).unwrap();
-        println!("{:?}", unsafe {*parameters});
-        unsafe { entrypoint.Invoke_3(obj, parameters, &mut pRetVal).unwrap() };
-    });
+    let mut assembly_ptr = std::ptr::null_mut();
+    unsafe { appdomain.Load_3(safe_array_ptr, &mut assembly_ptr).unwrap() };
+    let mut assembly = unsafe { IAssembly::from_raw(assembly_ptr as *mut c_void) };
+
+    let mut entry_ptr = std::ptr::null_mut();
+    unsafe { assembly.get_EntryPoint(&mut entry_ptr).unwrap() };
+    let mut entrypoint = unsafe { IMethodInfo::from_raw(entry_ptr as *mut c_void) };
+
+    let obj = VARIANT::default();
+    let mut pRetVal = VARIANT::default();
+    let args = vec![String::from("test1"), String::from("test2")];
+    let args_safearray_ptr = util::create_safearray_from_strings(&args).unwrap();
+    unsafe {
+        entrypoint
+            .Invoke_3(obj, args_safearray_ptr, &mut pRetVal)
+            .unwrap()
+    };
 }
 
-pub fn wrap_strings_in_array(strings: &[String]) -> Result<VARIANT, String> {
-    let inner = strings.iter()
-        .map(|s| BSTR::from(s).into_raw())
-        .collect::<Vec<*const u16>>();
-
-    let safe_array_ptr: *mut SAFEARRAY =
-        unsafe { SafeArrayCreateVector(VT_BSTR, 0, inner.len() as u32) };
-
-    inner.iter().enumerate().for_each(|(i, v)| {
-        match unsafe { SafeArrayPutElement(safe_array_ptr, [i as i32].as_ptr(), *v as *const _) } {
-            Ok(_) => {},
-            Err(e) => {println!("{e}")},
-        }
-    });
-
-    Ok(VARIANT {
-        Anonymous: VARIANT_0 {
-            Anonymous: ManuallyDrop::new(VARIANT_0_0 {
-                vt: VARENUM(VT_BSTR.0 | VT_ARRAY.0),
-                wReserved1: 0,
-                wReserved2: 0,
-                wReserved3: 0,
-                Anonymous: VARIANT_0_0_0 {
-                    parray: safe_array_ptr,
-                },
-            }),
-        },
-    })
-}
-
-pub fn wrap_method_arguments(arguments: Vec<VARIANT>) -> Result<*mut SAFEARRAY, String> {
-    let variant_array_ptr: *mut SAFEARRAY =
-        unsafe { SafeArrayCreateVector(VT_VARIANT, 0, arguments.len() as u32) };
-
-    arguments.iter().enumerate().for_each(|(i, v)| {
-        let v_ref: *const _ = v;
-        match unsafe { SafeArrayPutElement(variant_array_ptr, [i as i32].as_ptr(), v_ref as *const _) }
-        {
-            Ok(_) => {},
-            Err(e) => {println!("{e}")},
-        }
-
-    });
-
-    Ok(variant_array_ptr)
-}

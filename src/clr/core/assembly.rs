@@ -1,33 +1,49 @@
-use core::ffi;
 use std::ffi::c_void;
 
 use windows_core::HRESULT;
 
-use crate::methodinfo::IMethodInfo;
+use super::methodinfo::IMethodInfo;
 
-
-windows_core::imp::define_interface!(IAssembly, IAssembly_Vtbl, 0x05F696DC_2B29_3663_AD8B_C4389CF2A713);
+windows_core::imp::define_interface!(
+    IAssembly,
+    IAssembly_Vtbl,
+    0x17156360_2f1a_384a_bc52_fde93c215c5b
+);
 windows_core::imp::interface_hierarchy!(IAssembly, windows_core::IUnknown);
-impl IAssembly { 
+impl IAssembly {
     pub unsafe fn ToString(&self) -> windows_core::Result<windows_core::BSTR> {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).ToString)(windows_core::Interface::as_raw(self), &mut result__).map(|| core::mem::transmute(result__))
+            (windows_core::Interface::vtable(self).ToString)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| core::mem::transmute(result__))
         }
     }
 
     pub unsafe fn get_FullName(&self) -> windows_core::Result<windows_core::BSTR> {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).get_FullName)(windows_core::Interface::as_raw(self), &mut result__).map(|| core::mem::transmute(result__))
+            (windows_core::Interface::vtable(self).get_FullName)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| core::mem::transmute(result__))
         }
     }
 
-    pub unsafe fn get_EntryPoint(&self, pRetVal: *mut *mut IMethodInfo) ->windows_core::Result<()> {
+    pub unsafe fn get_EntryPoint(
+        &self,
+        pRetVal: *mut *mut IMethodInfo,
+    ) -> windows_core::Result<()> {
         unsafe {
-            (windows_core::Interface::vtable(self).get_EntryPoint)(windows_core::Interface::as_raw(self), pRetVal).ok()
+            (windows_core::Interface::vtable(self).get_EntryPoint)(
+                windows_core::Interface::as_raw(self),
+                pRetVal,
+            )
+            .ok()
         }
-
     }
 }
 
@@ -46,8 +62,14 @@ pub struct IAssembly_Vtbl {
     pub get_EscapedCodeBase: *const c_void,
     pub GetName: *const c_void,
     pub GetName_2: *const c_void,
-    pub get_FullName: unsafe extern "system" fn(this: *mut c_void, pRetVal: *mut *mut u16) -> windows_core::HRESULT,
-    pub get_EntryPoint: unsafe extern "system" fn(this: *mut c_void, pRetVal: *mut *mut IMethodInfo ) -> windows_core::HRESULT,
+    pub get_FullName: unsafe extern "system" fn(
+        this: *mut c_void,
+        pRetVal: *mut *mut u16,
+    ) -> windows_core::HRESULT,
+    pub get_EntryPoint: unsafe extern "system" fn(
+        this: *mut c_void,
+        pRetVal: *mut *mut IMethodInfo,
+    ) -> windows_core::HRESULT,
     pub GetType_2: *const c_void,
     pub GetType_3: *const c_void,
     pub GetExportedTypes: *const c_void,
