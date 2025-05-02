@@ -21,4 +21,5 @@ features = [
     "Win32_System_Variant",
     "Win32_System_Environment",
     "Win32_UI_Shell",
+    "Win32_Networking_WinInet",
 ]

