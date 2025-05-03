@@ -3,6 +3,7 @@ use std::os::raw::c_void;
 mod clr;
 mod commandline;
 mod file;
+mod patch;
 
 use clap::Parser;
 use clr::core::appdomain::IAppDomain;
@@ -18,6 +19,8 @@ use windows_core::Interface;
 const CLR_VERSION: &str = "v4.0.30319";
 
 fn main() {
+    patch::patch_amsi();
+
     let commandline = commandline::CommandLine::parse();
 
     let installed_versions = util::get_installed_runtime_versions();
