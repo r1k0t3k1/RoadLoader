@@ -1,22 +1,37 @@
-use clap::{Parser, ValueEnum, command};
+use clap::{builder::{IntoResettable, MapValueParser, NonEmptyStringValueParser, TypedValueParser}, command, Parser, ValueEnum};
+use base64::prelude::*;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct CommandLine {
-    #[arg(short, long)]
-    pub mode: Mode,
+    #[arg(short, long, group = "location", conflicts_with_all = ["path", "path_b64", "url_b64"])]
+    pub url: Option<String>,
 
-    #[arg(short, long)]
-    pub url: String,
+    #[arg(short, long, group = "location", conflicts_with_all = ["url", "path_b64", "url_b64"])]
+    pub path: Option<String>,
+
+    #[arg(
+        long,
+        group = "location_b64",
+        conflicts_with_all = ["url", "path", "path_b64"],
+        value_parser = NonEmptyStringValueParser::new().map(|s| -> String { 
+            String::from_utf8(BASE64_STANDARD.decode(s).unwrap()).unwrap()
+        })
+    )]
+    pub url_b64: Option<String>,
+
+    #[arg(
+        long,
+        group = "location_b64", 
+        conflicts_with_all = ["url", "path", "url_b64"],
+        value_parser = NonEmptyStringValueParser::new().map(|s| -> String { 
+            String::from_utf8(BASE64_STANDARD.decode(s).unwrap()).unwrap()
+        })
+    )]
+    pub path_b64: Option<String>,
 
     #[arg(last = true)]
     pub derive_command: Vec<String>,
-}
-
-#[derive(ValueEnum, Clone, Debug)]
-enum Mode {
-    FileSystem,
-    Http,
 }
 
 //pub fn get_commandline_args() -> Vec<String> {

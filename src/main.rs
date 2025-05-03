@@ -35,8 +35,17 @@ fn main() {
 
     let appdomain = cor_runtime_host.create_domain();
 
-    //let buf = get_payload_from_filesystem(commandline.url);
-    let buf = get_payload_from_url(commandline.url);
+    let buf = if commandline.path.is_some() {
+        get_payload_from_filesystem(commandline.path.unwrap())
+    } else if commandline.path_b64.is_some() {
+        get_payload_from_filesystem(commandline.path_b64.unwrap())
+    } else if commandline.url.is_some() {
+        get_payload_from_url(commandline.url.unwrap())
+    } else if commandline.url_b64.is_some() {
+        get_payload_from_url(commandline.url_b64.unwrap())
+    } else {
+        vec![]
+    };
 
     let mut bounds = SAFEARRAYBOUND {
         cElements: buf.len() as _,
