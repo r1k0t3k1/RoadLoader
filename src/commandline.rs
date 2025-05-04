@@ -1,5 +1,9 @@
-use clap::{builder::{IntoResettable, MapValueParser, NonEmptyStringValueParser, TypedValueParser}, command, Parser, ValueEnum};
 use base64::prelude::*;
+use clap::{
+    Parser, ValueEnum,
+    builder::{IntoResettable, MapValueParser, NonEmptyStringValueParser, TypedValueParser},
+    command,
+};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

