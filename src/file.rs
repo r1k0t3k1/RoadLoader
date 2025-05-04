@@ -3,9 +3,9 @@ use std::ffi::c_void;
 use windows::Win32::{
     Foundation::{GENERIC_READ, GetLastError},
     Networking::WinInet::{
-        HTTP_QUERY_CONTENT_LENGTH, HttpQueryInfoA, INTERNET_BUFFERSA,
-        INTERNET_FLAG_KEEP_CONNECTION, INTERNET_FLAG_NO_CACHE_WRITE, INTERNET_OPEN_TYPE_PRECONFIG,
-        IRF_SYNC, InternetCloseHandle, InternetOpenUrlW, InternetOpenW, InternetReadFileExA,
+        HTTP_QUERY_CONTENT_LENGTH, HttpQueryInfoA, INTERNET_BUFFERSA, INTERNET_FLAG_NO_CACHE_WRITE,
+        INTERNET_OPEN_TYPE_PRECONFIG, IRF_SYNC, InternetCloseHandle, InternetOpenUrlW,
+        InternetOpenW, InternetReadFileExA,
     },
     Storage::FileSystem::{
         CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_CREATION_DISPOSITION, FILE_SHARE_READ,

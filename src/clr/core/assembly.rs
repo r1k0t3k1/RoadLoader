@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use windows_core::HRESULT;
+use windows_core::{HRESULT, Interface};
 
 use super::methodinfo::IMethodInfo;
 
@@ -11,6 +11,12 @@ windows_core::imp::define_interface!(
 );
 windows_core::imp::interface_hierarchy!(IAssembly, windows_core::IUnknown);
 impl IAssembly {
+    pub fn get_entrypoint(&self) -> IMethodInfo {
+        let mut entry_ptr = std::ptr::null_mut();
+        unsafe { self.get_EntryPoint(&mut entry_ptr).unwrap() };
+        unsafe { IMethodInfo::from_raw(entry_ptr as *mut c_void) }
+    }
+
     pub unsafe fn ToString(&self) -> windows_core::Result<windows_core::BSTR> {
         unsafe {
             let mut result__ = core::mem::zeroed();

@@ -1,7 +1,11 @@
 use core::ffi::c_void;
 
-use windows::Win32::System::Com::SAFEARRAY;
-use windows_core::IUnknown_Vtbl;
+use windows::Win32::System::{
+    Com::{SAFEARRAY, SAFEARRAYBOUND},
+    Ole::{SafeArrayAccessData, SafeArrayCreate, SafeArrayUnaccessData},
+    Variant::VT_UI1,
+};
+use windows_core::{IUnknown_Vtbl, Interface};
 
 use super::assembly::IAssembly;
 
@@ -12,6 +16,37 @@ windows_core::imp::define_interface!(
 );
 windows_core::imp::interface_hierarchy!(IAppDomain, windows_core::IUnknown);
 impl IAppDomain {
+    pub fn load_assembly(&self, assembly: &[u8]) -> IAssembly {
+        let mut bounds = SAFEARRAYBOUND {
+            cElements: assembly.len() as _,
+            lLbound: 0,
+        };
+
+        let safe_array_ptr: *mut SAFEARRAY = unsafe { SafeArrayCreate(VT_UI1, 1, &mut bounds) };
+        let mut pv_data: *mut c_void = std::ptr::null_mut();
+
+        match unsafe { SafeArrayAccessData(safe_array_ptr, &mut pv_data) } {
+            Ok(_) => {}
+            Err(e) => {
+                println!("e")
+            }
+        }
+
+        unsafe { std::ptr::copy_nonoverlapping(assembly.as_ptr(), pv_data.cast(), assembly.len()) };
+
+        match unsafe { SafeArrayUnaccessData(safe_array_ptr) } {
+            Ok(_) => {}
+            Err(e) => {
+                println!("e")
+            }
+        };
+
+        let mut assembly_ptr = std::ptr::null_mut();
+        unsafe { self.Load_3(safe_array_ptr, &mut assembly_ptr).unwrap() };
+
+        unsafe { IAssembly::from_raw(assembly_ptr as *mut c_void) }
+    }
+
     //pub unsafe fn GetTypeInfoCount() -> windows_core::Result<()>{ Ok(()) }
     //pub unsafe fn GetTypeInfo() -> windows_core::Result<()>{ Ok(()) }
     //pub unsafe fn GetIDsOfNames() -> windows_core::Result<()>{ Ok(()) }

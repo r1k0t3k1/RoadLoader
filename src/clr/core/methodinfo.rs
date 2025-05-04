@@ -3,6 +3,8 @@ use core::ffi::c_void;
 use windows::Win32::System::{Com::SAFEARRAY, Variant::VARIANT};
 use windows_core::{HRESULT, IUnknown_Vtbl};
 
+use crate::clr::util;
+
 windows_core::imp::define_interface!(
     IMethodInfo,
     IMethodInfo_Vtbl,
@@ -10,6 +12,16 @@ windows_core::imp::define_interface!(
 );
 windows_core::imp::interface_hierarchy!(IMethodInfo, windows_core::IUnknown);
 impl IMethodInfo {
+    pub fn invoke(&self, args: &[String]) {
+        let args_safearray_ptr = util::create_safearray_from_strings(&args).unwrap();
+        let obj = VARIANT::default();
+        let mut pRetVal = VARIANT::default();
+        unsafe {
+            self.Invoke_3(obj, args_safearray_ptr, &mut pRetVal)
+                .unwrap()
+        };
+    }
+
     pub unsafe fn ToString(&self) -> windows_core::Result<windows_core::BSTR> {
         unsafe {
             let mut result__ = core::mem::zeroed();

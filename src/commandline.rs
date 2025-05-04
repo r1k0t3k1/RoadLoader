@@ -1,7 +1,7 @@
 use base64::prelude::*;
 use clap::{
-    Parser, ValueEnum,
-    builder::{IntoResettable, MapValueParser, NonEmptyStringValueParser, TypedValueParser},
+    Parser,
+    builder::{NonEmptyStringValueParser, TypedValueParser},
     command,
 };
 
@@ -18,7 +18,7 @@ pub struct CommandLine {
         long,
         group = "location_b64",
         conflicts_with_all = ["url", "path", "path_b64"],
-        value_parser = NonEmptyStringValueParser::new().map(|s| -> String { 
+        value_parser = NonEmptyStringValueParser::new().map(|s| -> String {
             String::from_utf8(BASE64_STANDARD.decode(s).unwrap()).unwrap()
         })
     )]
@@ -28,7 +28,7 @@ pub struct CommandLine {
         long,
         group = "location_b64", 
         conflicts_with_all = ["url", "path", "url_b64"],
-        value_parser = NonEmptyStringValueParser::new().map(|s| -> String { 
+        value_parser = NonEmptyStringValueParser::new().map(|s| -> String {
             String::from_utf8(BASE64_STANDARD.decode(s).unwrap()).unwrap()
         })
     )]
@@ -37,15 +37,3 @@ pub struct CommandLine {
     #[arg(last = true)]
     pub derive_command: Vec<String>,
 }
-
-//pub fn get_commandline_args() -> Vec<String> {
-//    let mut param_count = 0_i32;
-//    let arr_ptr = unsafe {
-//        CommandLineToArgvW(GetCommandLineW(), &mut param_count)
-//    };
-//
-//    let args = unsafe { std::slice::from_raw_parts_mut(arr_ptr, param_count as usize) };
-//    args.iter().map(|pwstr| {
-//        String::from_utf16_lossy(unsafe { pwstr.as_wide() })
-//    } ).collect()
-//}
