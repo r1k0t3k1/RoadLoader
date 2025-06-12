@@ -32,13 +32,13 @@ fn main() {
             clr::runtime_host::CLRRuntimeHost::from(
                 installed_versions.get(CLR_VERSION_V2).unwrap().clone(),
             );
-        },
+        }
         false => {
             clr::runtime_host::CLRRuntimeHost::from(
                 installed_versions.get(CLR_VERSION_V4).unwrap().clone(),
             );
-        },
-    }
+        }
+    };
 
     let appdomain = cor_runtime_host.create_domain();
 
