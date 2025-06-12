@@ -29,8 +29,10 @@ fn main() {
 
     let cor_runtime_host = match is_installed_v4 {
         true => {
+            let info = installed_versions.get(CLR_VERSION_V4).unwrap();
+            let _ = info.BindAsLegacyV2Runtime();
             clr::runtime_host::CLRRuntimeHost::from(
-                installed_versions.get(CLR_VERSION_V4).unwrap().clone(),
+                info.clone(),
             )
         },
         false => {
