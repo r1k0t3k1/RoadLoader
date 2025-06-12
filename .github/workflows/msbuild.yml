@@ -19,6 +19,9 @@ jobs:
       - name: Build
         run: cargo build --release
 
+      - name: test exec
+        run: ./target/release/road_loader.exe -p .\.net4-test-project.exe -- "argument"
+
       - name: Release
         uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
