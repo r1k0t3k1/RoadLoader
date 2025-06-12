@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
 use windows::Win32::{
-    Foundation::S_OK,
+    Foundation::{ S_OK, h },
     System::{
         ClrHosting::{CLRCreateInstance, CLSID_CLRMetaHost, ICLRMetaHost, ICLRRuntimeInfo},
         Com::SAFEARRAY,
         Ole::{SafeArrayCreateVector, SafeArrayPutElement},
         Variant::{InitVariantFromStringArray, VT_VARIANT},
+        LibraryLoader::LoadLibraryA,
     },
 };
 use windows_core::{BSTR, GUID, Interface, PCWSTR, PWSTR};
@@ -19,6 +20,7 @@ pub const CLSID_CorRuntimeHost: GUID = GUID::from_values(
 );
 
 pub fn get_installed_runtime_versions() -> HashMap<String, ICLRRuntimeInfo> {
+    let _ = unsafe { LoadLibraryA(h!("mscorlib")).unwrap() };
     let clr_meta_host: ICLRMetaHost =
         unsafe { CLRCreateInstance::<ICLRMetaHost>(&CLSID_CLRMetaHost).unwrap() };
     let runtimes = unsafe { clr_meta_host.EnumerateInstalledRuntimes().unwrap() };
