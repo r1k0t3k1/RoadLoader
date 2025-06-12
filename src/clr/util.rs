@@ -10,7 +10,7 @@ use windows::Win32::{
         LibraryLoader::LoadLibraryA,
     },
 };
-use windows_core::{BSTR, GUID, Interface, PCWSTR, PWSTR, h};
+use windows_core::{BSTR, GUID, Interface, PCWSTR, PWSTR, s};
 
 pub const CLSID_CorRuntimeHost: GUID = GUID::from_values(
     0xcb2f6723,
@@ -20,7 +20,7 @@ pub const CLSID_CorRuntimeHost: GUID = GUID::from_values(
 );
 
 pub fn get_installed_runtime_versions() -> HashMap<String, ICLRRuntimeInfo> {
-    let _ = unsafe { LoadLibraryA(h!("mscorlib")).unwrap() };
+    let _ = unsafe { LoadLibraryA(s!("mscorlib")).unwrap() };
     let clr_meta_host: ICLRMetaHost =
         unsafe { CLRCreateInstance::<ICLRMetaHost>(&CLSID_CLRMetaHost).unwrap() };
     let runtimes = unsafe { clr_meta_host.EnumerateInstalledRuntimes().unwrap() };
