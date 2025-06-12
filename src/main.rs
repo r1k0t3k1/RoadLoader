@@ -27,15 +27,15 @@ fn main() {
         return;
     };
 
-    let cor_runtime_host = match is_installed_v2 {
+    let cor_runtime_host = match is_installed_v4 {
         true => {
             clr::runtime_host::CLRRuntimeHost::from(
-                installed_versions.get(CLR_VERSION_V2).unwrap().clone(),
+                installed_versions.get(CLR_VERSION_V4).unwrap().clone(),
             )
         },
         false => {
             clr::runtime_host::CLRRuntimeHost::from(
-                installed_versions.get(CLR_VERSION_V4).unwrap().clone(),
+                installed_versions.get(CLR_VERSION_V2).unwrap().clone(),
             )
         },
     };
