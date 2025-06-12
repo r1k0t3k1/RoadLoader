@@ -25,7 +25,7 @@ fn main() {
     if !is_installed_v4 && !is_installed_v2 {
         println!("Expected CLR version is not installed.");
         return;
-    }
+    };
 
     let cor_runtime_host = match is_installed_v2 {
         true => {
