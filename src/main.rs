@@ -7,7 +7,8 @@ use clap::Parser;
 use clr::util;
 use file::{get_payload_from_filesystem, get_payload_from_url};
 
-const CLR_VERSION: &str = "v4.0.30319";
+//const CLR_VERSION: &str = "v4.0.30319";
+const CLR_VERSION: &str = "v2.0.50727";
 
 fn main() {
     if let Err(e) = patch::patch_amsi() {
