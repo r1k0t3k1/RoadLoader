@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use windows::Win32::{
-    Foundation::{ S_OK, h },
+    Foundation::S_OK,
     System::{
         ClrHosting::{CLRCreateInstance, CLSID_CLRMetaHost, ICLRMetaHost, ICLRRuntimeInfo},
         Com::SAFEARRAY,
@@ -10,7 +10,7 @@ use windows::Win32::{
         LibraryLoader::LoadLibraryA,
     },
 };
-use windows_core::{BSTR, GUID, Interface, PCWSTR, PWSTR};
+use windows_core::{BSTR, GUID, Interface, PCWSTR, PWSTR, h};
 
 pub const CLSID_CorRuntimeHost: GUID = GUID::from_values(
     0xcb2f6723,
