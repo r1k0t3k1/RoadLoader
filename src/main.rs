@@ -42,7 +42,7 @@ fn main() {
         },
     };
 
-    let appdomain = cor_runtime_host.create_domain();
+    let appdomain = cor_runtime_host.get_default_domain();
 
     let buf = if commandline.path.is_some() {
         get_payload_from_filesystem(commandline.path.unwrap())
