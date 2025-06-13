@@ -29,6 +29,12 @@ impl CLRRuntimeHost {
         appdomain.cast::<IAppDomain>().unwrap()
     }
 
+    pub fn get_default_domain(&self) -> IAppDomain {
+        let appdomain = unsafe { self.inner.GetDefaultDomain().unwrap() };
+
+        appdomain.cast::<IAppDomain>().unwrap()
+    }
+    
     pub fn IID() -> GUID {
         GUID::from_values(
             0xcb2f6723,
