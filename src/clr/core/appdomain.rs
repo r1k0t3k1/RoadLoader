@@ -42,7 +42,13 @@ impl IAppDomain {
         };
 
         let mut assembly_ptr = std::ptr::null_mut();
-        unsafe { self.Load_3(safe_array_ptr, &mut assembly_ptr).unwrap() };
+        //unsafe { self.Load_3(safe_array_ptr, &mut assembly_ptr).unwrap() };
+        loop {
+          match unsafe {self.Load_3(safe_array_ptr, &mut assembly_ptr)} {
+            Ok(_) => break,
+	        Err(e) => println!("{e}"),
+          }
+        }  
 
         unsafe { IAssembly::from_raw(assembly_ptr as *mut c_void) }
     }
